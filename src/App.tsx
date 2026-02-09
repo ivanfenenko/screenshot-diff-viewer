@@ -15,6 +15,9 @@ function App() {
   const { repoPath, currentBranch, baseRef, screenshots, error, reset, setScreenshots, setError } = useAppStore();
   const { selectRepository } = useGitOperations();
 
+  // Extract repository name from path
+  const repoName = repoPath ? repoPath.split('/').pop() : '';
+
   // Load last used repository on startup
   useEffect(() => {
     const loadLastRepo = async () => {
@@ -97,11 +100,16 @@ function App() {
               </div>
             </div>
 
-            {/* Working Directory Badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-sm">
-              <GitBranch className="w-4 h-4 text-slate-600" />
-              <span className="text-slate-500 text-xs mr-1">Working Directory:</span>
-              <span className="font-medium text-slate-700">{currentBranch}</span>
+            {/* Repository and Working Branch Info */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-slate-50 rounded-lg text-sm border border-slate-200">
+                <FolderOpen className="w-4 h-4 text-slate-500" />
+                <span className="font-semibold text-slate-700">{repoName}</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-sm">
+                <GitBranch className="w-4 h-4 text-slate-600" />
+                <span className="font-medium text-slate-700">{currentBranch}</span>
+              </div>
             </div>
           </div>
 

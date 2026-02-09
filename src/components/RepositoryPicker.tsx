@@ -6,6 +6,16 @@ export const RepositoryPicker = () => {
   const { selectRepository } = useGitOperations();
   const { isLoading } = useAppStore();
 
+  const handleClick = async () => {
+    console.log('[RepositoryPicker] Button clicked');
+    try {
+      await selectRepository();
+      console.log('[RepositoryPicker] Repository selected');
+    } catch (error) {
+      console.error('[RepositoryPicker] Error selecting repository:', error);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="text-center max-w-2xl px-8">
@@ -48,7 +58,7 @@ export const RepositoryPicker = () => {
 
         {/* CTA Button */}
         <button
-          onClick={selectRepository}
+          onClick={handleClick}
           disabled={isLoading}
           className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 active:scale-95"
         >

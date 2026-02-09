@@ -27,6 +27,11 @@
       "csp": null
     }
   },
+  "plugins": {
+    "store": {
+      "enabled": true
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

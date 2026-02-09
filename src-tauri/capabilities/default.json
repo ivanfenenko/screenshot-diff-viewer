@@ -16,6 +16,11 @@
     "fs:allow-read-dir",
     "fs:allow-exists",
     "fs:allow-read",
-    "fs:allow-read-text-file"
+    "fs:allow-read-text-file",
+    "store:default",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save",
+    "store:allow-load"
   ]
 }

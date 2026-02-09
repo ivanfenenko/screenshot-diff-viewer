@@ -78,6 +78,14 @@ export const BranchSelector = ({ mode, label }: BranchSelectorProps) => {
     return null;
   };
 
+  // Shorten commit hash to 7 characters for display
+  const getDisplayRef = () => {
+    if (selectedRefType === 'commit' && selectedRef) {
+      return selectedRef.substring(0, 7);
+    }
+    return selectedRef;
+  };
+
   const displayLabel = label || (mode === 'base' ? 'Base' : 'Compare');
 
   return (
@@ -86,7 +94,7 @@ export const BranchSelector = ({ mode, label }: BranchSelectorProps) => {
         <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 text-emerald-800 rounded-lg shadow-sm">
           {getIcon()}
           <span className="text-sm font-medium">
-            {displayLabel}: <span className="font-semibold">{selectedRef}</span>
+            {displayLabel}: <span className="font-semibold">{getDisplayRef()}</span>
           </span>
           <button
             onClick={clearSelection}

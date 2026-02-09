@@ -40,7 +40,7 @@ fn scan_screenshots(repo_path: String) -> Result<Vec<Screenshot>, String> {
 fn scan_screenshots_at_ref(repo_path: String, git_ref: String) -> Result<Vec<Screenshot>, String> {
     let repo = Path::new(&repo_path);
     let mut screenshots = Vec::new();
-    
+
     // Common screenshot directories
     let directories = vec![
         "app/src/test/snapshots/images",
@@ -49,29 +49,26 @@ fn scan_screenshots_at_ref(repo_path: String, git_ref: String) -> Result<Vec<Scr
         "screenshots",
         "__snapshots__",
     ];
-    
+
     for dir in directories {
         match git::list_files_at_ref(repo, &git_ref, dir) {
             Ok(files) => {
                 for file_path in files {
                     // file_path is relative to the directory, e.g., "image.png" or "subdir/image.png"
-                    let name = file_path.split('/').last().unwrap_or(&file_path).to_string();
+                    let name = file_path
+                        .split('/')
+                        .last()
+                        .unwrap_or(&file_path)
+                        .to_string();
                     let relative_path = format!("{}/{}", dir, file_path);
                     let absolute_path = format!("{}/{}", repo_path, relative_path);
-                    
+
                     screenshots.push(Screenshot {
                         name,
                         relative_path,
                         absolute_path,
                     });
                 }
-            }
-            Err(_) => continue,
-        }
-    }
-    
-    Ok(screenshots)
-}
             }
             Err(_) => continue,
         }

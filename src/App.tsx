@@ -5,7 +5,7 @@ import { RepositoryPicker } from './components/RepositoryPicker';
 import { ScreenshotList } from './components/ScreenshotList';
 import { ComparisonView } from './components/ComparisonView';
 import { BranchSelector } from './components/BranchSelector';
-import { GitBranch, FolderOpen, Camera } from 'lucide-react';
+import { GitBranch, FolderOpen, Camera, RefreshCw } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { Screenshot } from './types';
 import { Store } from '@tauri-apps/plugin-store';
@@ -100,24 +100,22 @@ function App() {
               </div>
             </div>
 
-            {/* Repository Info */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-slate-50 rounded-lg text-sm border border-slate-200">
-              <FolderOpen className="w-4 h-4 text-slate-500" />
+            {/* Repository Info - Clickable to change repo */}
+            <button
+              onClick={reset}
+              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-slate-50 rounded-lg text-sm border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all group"
+              title="Click to change repository"
+            >
+              <FolderOpen className="w-4 h-4 text-slate-500 group-hover:text-slate-600" />
               <span className="font-semibold text-slate-700">{repoName}</span>
-            </div>
+              <RefreshCw className="w-3 h-3 text-slate-400 group-hover:text-slate-600 transition-colors" />
+            </button>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-3">
             <BranchSelector mode="base" label="Base" />
             <BranchSelector mode="compare" label="Compare" />
-            <button
-              onClick={reset}
-              className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-            >
-              <FolderOpen className="w-4 h-4" />
-              Change Repo
-            </button>
           </div>
         </div>
       </div>

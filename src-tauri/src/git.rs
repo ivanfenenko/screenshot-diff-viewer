@@ -169,3 +169,29 @@ pub fn get_lfs_object_path(repo_path: &Path, oid: &str) -> PathBuf {
         repo_path.join(".git/lfs/objects").join(oid)
     }
 }
+
+/// List PNG files in a specific directory at a given Git ref
+pub fn list_files_at_ref(
+    repo_path: &Path,
+    git_ref: &str,
+    directory: &str,
+) -> Result<Vec<String>, GitError> {
+    let tree_spec = format!("{}:{}", git_ref, directory);
+
+    let output = Command::new("git")
+        .args(["ls-tree", "-r", "--name-only", &tree_spec])
+        .current_dir(repo_path)
+        .output()?;
+
+    if output.status.success() {
+        let files: Vec<String> = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter(|line| line.ends_with(".png"))
+            .map(|s| s.trim().to_string())
+            .collect();
+        Ok(files)
+    } else {
+        // Directory might not exist in this ref, return empty list
+        Ok(Vec::new())
+    }
+}

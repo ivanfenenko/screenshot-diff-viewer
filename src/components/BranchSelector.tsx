@@ -3,13 +3,21 @@ import { GitBranch, Tag, Hash, X, Check, ArrowRight } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { useGitOperations } from '../hooks/useGitOperations';
 
-export const BranchSelector = () => {
+interface BranchSelectorProps {
+  mode: 'base' | 'compare';
+  label?: string;
+}
+
+export const BranchSelector = ({ mode, label }: BranchSelectorProps) => {
   const {
     currentBranch,
     branches,
     tags,
+    baseRef,
+    baseRefType,
     compareRef,
     compareRefType,
+    setBaseRef,
     setCompareRef,
     repoPath,
   } = useAppStore();
@@ -21,14 +29,19 @@ export const BranchSelector = () => {
   const [commitInput, setCommitInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Get the current selected ref based on mode
+  const selectedRef = mode === 'base' ? baseRef : compareRef;
+  const selectedRefType = mode === 'base' ? baseRefType : compareRefType;
+  const setRef = mode === 'base' ? setBaseRef : setCompareRef;
+
   const handleSelectBranch = (branch: string) => {
-    setCompareRef(branch, 'branch');
+    setRef(branch, 'branch');
     setIsOpen(false);
     setSearchTerm('');
   };
 
   const handleSelectTag = (tag: string) => {
-    setCompareRef(tag, 'tag');
+    setRef(tag, 'tag');
     setIsOpen(false);
     setSearchTerm('');
   };
@@ -38,7 +51,7 @@ export const BranchSelector = () => {
     
     const isValid = await validateCommitHash(repoPath, commitInput.trim());
     if (isValid) {
-      setCompareRef(commitInput.trim(), 'commit');
+      setRef(commitInput.trim(), 'commit');
       setIsOpen(false);
       setCommitInput('');
     } else {
@@ -46,8 +59,8 @@ export const BranchSelector = () => {
     }
   };
 
-  const clearCompare = () => {
-    setCompareRef(null, null);
+  const clearSelection = () => {
+    setRef(null, null);
   };
 
   const filteredBranches = branches.filter((branch) =>
@@ -59,24 +72,26 @@ export const BranchSelector = () => {
   );
 
   const getIcon = () => {
-    if (compareRefType === 'branch') return <GitBranch className="w-4 h-4" />;
-    if (compareRefType === 'tag') return <Tag className="w-4 h-4" />;
-    if (compareRefType === 'commit') return <Hash className="w-4 h-4" />;
+    if (selectedRefType === 'branch') return <GitBranch className="w-4 h-4" />;
+    if (selectedRefType === 'tag') return <Tag className="w-4 h-4" />;
+    if (selectedRefType === 'commit') return <Hash className="w-4 h-4" />;
     return null;
   };
 
+  const displayLabel = label || (mode === 'base' ? 'Base' : 'Compare');
+
   return (
     <div className="relative">
-      {compareRef ? (
+      {selectedRef ? (
         <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 text-emerald-800 rounded-lg shadow-sm">
           {getIcon()}
           <span className="text-sm font-medium">
-            Comparing with <span className="font-semibold">{compareRef}</span>
+            {displayLabel}: <span className="font-semibold">{selectedRef}</span>
           </span>
           <button
-            onClick={clearCompare}
+            onClick={clearSelection}
             className="ml-1 p-1 hover:bg-emerald-200 rounded transition-colors"
-            title="Clear comparison"
+            title={`Clear ${displayLabel.toLowerCase()} selection`}
           >
             <X className="w-4 h-4" />
           </button>
@@ -86,7 +101,7 @@ export const BranchSelector = () => {
           onClick={() => setIsOpen(!isOpen)}
           className="group px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all duration-200 hover:scale-105 font-medium text-sm flex items-center gap-2"
         >
-          <span>Compare with...</span>
+          <span>Select {displayLabel}...</span>
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
       )}
@@ -143,6 +158,9 @@ export const BranchSelector = () => {
                   placeholder={`Search ${activeTab}s...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck="false"
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -212,6 +230,9 @@ export const BranchSelector = () => {
                     value={commitInput}
                     onChange={(e) => setCommitInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleValidateCommit()}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3 font-mono"
                   />
                   <button

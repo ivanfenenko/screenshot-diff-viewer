@@ -10,6 +10,23 @@ export const ScreenshotList = () => {
     screenshot.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Extract display name from screenshot filename
+  // Example: "com.example.demoarchitecture.ui_ScreenshotsDarkTest_homeScreenDark.png" -> "homeScreenDark"
+  const getDisplayName = (filename: string): string => {
+    // Remove file extension
+    const nameWithoutExt = filename.replace(/\.(png|jpg|jpeg)$/i, '');
+    
+    // Find the last underscore and take everything after it
+    const lastUnderscoreIndex = nameWithoutExt.lastIndexOf('_');
+    
+    if (lastUnderscoreIndex !== -1 && lastUnderscoreIndex < nameWithoutExt.length - 1) {
+      return nameWithoutExt.substring(lastUnderscoreIndex + 1);
+    }
+    
+    // If no underscore found, return the whole name without extension
+    return nameWithoutExt;
+  };
+
   return (
     <div className="w-80 border-r border-slate-200 bg-white flex flex-col h-full shadow-sm">
       {/* Header */}
@@ -27,6 +44,9 @@ export const ScreenshotList = () => {
             placeholder="Search screenshots..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
             className="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
           />
         </div>
@@ -76,9 +96,9 @@ export const ScreenshotList = () => {
                     ? 'text-blue-900'
                     : 'text-slate-900'
                 }`}>
-                  {screenshot.name.replace('.png', '')}
+                  {getDisplayName(screenshot.name)}
                 </div>
-                <div className="text-xs text-slate-500 mt-1 truncate">
+                <div className="text-xs text-slate-500 mt-1 truncate" title={screenshot.name}>
                   {screenshot.relative_path.split('/').slice(0, -1).join('/')}
                 </div>
               </div>

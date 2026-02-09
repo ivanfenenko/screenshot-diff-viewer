@@ -2,59 +2,129 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { useGitOperations } from '../hooks/useGitOperations';
 import { ImageViewer } from './ImageViewer';
-import { convertFileSrc } from '@tauri-apps/api/core';
-import { Camera, FileQuestion, Loader2 } from 'lucide-react';
+import { Camera, FileQuestion, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { imageCache } from '../utils/imageCache';
 
 export const ComparisonView = () => {
   const {
     repoPath,
+    screenshots,
     selectedScreenshot,
+    baseRef,
     compareRef,
-    currentBranch,
+    setSelectedScreenshot,
   } = useAppStore();
 
   const { getFileAtRef } = useGitOperations();
 
-  const [currentImage, setCurrentImage] = useState<string | null>(null);
+  const [baseImage, setBaseImage] = useState<string | null>(null);
   const [compareImage, setCompareImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingBase, setIsLoadingBase] = useState(false);
+  const [isLoadingCompare, setIsLoadingCompare] = useState(false);
 
   console.log('[ComparisonView RENDER] State:', {
-    isLoading,
-    hasCurrentImage: !!currentImage,
+    isLoadingBase,
+    isLoadingCompare,
+    hasBaseImage: !!baseImage,
     hasCompareImage: !!compareImage,
+    baseRef,
     compareRef,
     screenshotName: selectedScreenshot?.name,
   });
 
-  useEffect(() => {
-    console.log('[Effect: currentImage] Triggered:', { 
-      hasScreenshot: !!selectedScreenshot, 
-      hasRepo: !!repoPath,
-      screenshotName: selectedScreenshot?.name 
-    });
-    
-    if (!selectedScreenshot || !repoPath) {
-      console.log('[Effect: currentImage] Early return - missing data');
-      return;
-    }
+  // Navigation functions
+  const currentIndex = screenshots.findIndex(
+    (s) => s.relative_path === selectedScreenshot?.relative_path
+  );
 
-    // Load current branch image
-    const loadCurrentImage = async () => {
-      try {
-        console.log('[Effect: currentImage] Loading image from:', selectedScreenshot.absolute_path);
-        // For current branch, use the file system path
-        const imageSrc = convertFileSrc(selectedScreenshot.absolute_path);
-        console.log('[Effect: currentImage] Setting currentImage:', imageSrc);
-        setCurrentImage(imageSrc);
-      } catch (error) {
-        console.error('[Effect: currentImage] Error loading current image:', error);
+  const hasPrevious = currentIndex > 0;
+  const hasNext = currentIndex < screenshots.length - 1;
+
+  const goToPrevious = () => {
+    if (hasPrevious) {
+      setSelectedScreenshot(screenshots[currentIndex - 1]);
+    }
+  };
+
+  const goToNext = () => {
+    if (hasNext) {
+      setSelectedScreenshot(screenshots[currentIndex + 1]);
+    }
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && hasPrevious) {
+        goToPrevious();
+      } else if (e.key === 'ArrowRight' && hasNext) {
+        goToNext();
       }
     };
 
-    loadCurrentImage();
-  }, [selectedScreenshot, repoPath]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, screenshots]);
+
+  useEffect(() => {
+    console.log('[Effect: baseImage] Triggered:', { 
+      hasScreenshot: !!selectedScreenshot, 
+      hasRepo: !!repoPath,
+      baseRef,
+      screenshotName: selectedScreenshot?.name 
+    });
+    
+    if (!selectedScreenshot || !repoPath || !baseRef) {
+      console.log('[Effect: baseImage] Early return - missing data');
+      setBaseImage(null);
+      setIsLoadingBase(false);
+      return;
+    }
+
+    // Load base image from Git ref
+    const loadBaseImage = async () => {
+      // Check cache first
+      const cachedImage = imageCache.get(
+        repoPath,
+        baseRef,
+        selectedScreenshot.relative_path
+      );
+
+      if (cachedImage) {
+        console.log('[Cache HIT] Using cached base image for:', baseRef, selectedScreenshot.relative_path);
+        setIsLoadingBase(false);
+        setBaseImage(`data:image/png;base64,${cachedImage}`);
+        return;
+      }
+
+      console.log('[Cache MISS] Fetching base image for:', baseRef, selectedScreenshot.relative_path);
+      setIsLoadingBase(true);
+      try {
+        console.log('[Cache MISS] Calling getFileAtRef...');
+        const base64Content = await getFileAtRef(
+          repoPath,
+          baseRef,
+          selectedScreenshot.relative_path
+        );
+        console.log('[Cache MISS] Got response (base64 length:', base64Content.length, ')');
+        
+        // Store in cache
+        imageCache.set(repoPath, baseRef, selectedScreenshot.relative_path, base64Content);
+        console.log('[Cache STORE] Cached base image for:', baseRef, selectedScreenshot.relative_path);
+        
+        console.log('[Cache MISS] Setting baseImage');
+        setBaseImage(`data:image/png;base64,${base64Content}`);
+      } catch (error) {
+        console.error('[Cache MISS] Error loading base image:', error);
+        setBaseImage(null);
+      } finally {
+        console.log('[Cache MISS] Setting isLoadingBase to FALSE (finally block)');
+        setIsLoadingBase(false);
+      }
+    };
+
+    loadBaseImage();
+  }, [selectedScreenshot, repoPath, baseRef]);
 
   useEffect(() => {
     console.log('[Effect: compareImage] Triggered:', { 
@@ -67,7 +137,7 @@ export const ComparisonView = () => {
     if (!selectedScreenshot || !repoPath || !compareRef) {
       console.log('[Effect: compareImage] Early return - clearing state');
       setCompareImage(null);
-      setIsLoading(false);
+      setIsLoadingCompare(false);
       return;
     }
 
@@ -84,8 +154,8 @@ export const ComparisonView = () => {
 
       if (cachedImage) {
         console.log('[Cache HIT] Using cached image for:', compareRef, selectedScreenshot.relative_path);
-        console.log('[Cache HIT] Setting isLoading to FALSE');
-        setIsLoading(false);
+        console.log('[Cache HIT] Setting isLoadingCompare to FALSE');
+        setIsLoadingCompare(false);
         console.log('[Cache HIT] Setting compareImage (base64 length:', cachedImage.length, ')');
         setCompareImage(`data:image/png;base64,${cachedImage}`);
         console.log('[Cache HIT] Done setting state');
@@ -93,8 +163,8 @@ export const ComparisonView = () => {
       }
 
       console.log('[Cache MISS] Fetching image for:', compareRef, selectedScreenshot.relative_path);
-      console.log('[Cache MISS] Setting isLoading to TRUE');
-      setIsLoading(true);
+      console.log('[Cache MISS] Setting isLoadingCompare to TRUE');
+      setIsLoadingCompare(true);
       try {
         console.log('[Cache MISS] Calling getFileAtRef...');
         const base64Content = await getFileAtRef(
@@ -114,8 +184,8 @@ export const ComparisonView = () => {
         console.error('[Cache MISS] Error loading compare image:', error);
         setCompareImage(null);
       } finally {
-        console.log('[Cache MISS] Setting isLoading to FALSE (finally block)');
-        setIsLoading(false);
+        console.log('[Cache MISS] Setting isLoadingCompare to FALSE (finally block)');
+        setIsLoadingCompare(false);
       }
     };
 
@@ -139,84 +209,131 @@ export const ComparisonView = () => {
     );
   }
 
-  if (!compareRef) {
-    console.log('[ComparisonView RENDER] Single image view (no compareRef)');
+  if (!baseRef && !compareRef) {
+    console.log('[ComparisonView RENDER] No refs selected - showing empty state');
     return (
-      <div className="flex-1 bg-white">
-        {currentImage && (
-          <ImageViewer
-            key={selectedScreenshot.absolute_path}
-            src={currentImage}
-            alt={selectedScreenshot.name}
-            label={`Current Branch: ${currentBranch}`}
-          />
-        )}
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center max-w-md px-8">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+            <Camera className="w-12 h-12 text-blue-600" strokeWidth={1.5} />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Select branches to compare</h3>
+          <p className="text-slate-500">
+            Choose base and compare branches from the selectors above
+          </p>
+        </div>
       </div>
     );
   }
 
   console.log('[ComparisonView RENDER] Comparison view - rendering layout');
   return (
-    <div className="flex-1 flex">
-      {/* Current Branch Image */}
-      <div className="flex-1 border-r-2 border-slate-200">
-        {currentImage ? (
-          <>
-            {console.log('[ComparisonView RENDER] Rendering currentImage ImageViewer')}
-            <ImageViewer
-              key={selectedScreenshot.absolute_path}
-              src={currentImage}
-              alt={selectedScreenshot.name}
-              label={`Current Branch: ${currentBranch}`}
-            />
-          </>
-        ) : (
-          console.log('[ComparisonView RENDER] No currentImage to display')
-        )}
-      </div>
+    <div className="flex-1 flex flex-col">
+      {/* Navigation Bar */}
+      {selectedScreenshot && screenshots.length > 1 && (
+        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
+          <button
+            onClick={goToPrevious}
+            disabled={!hasPrevious}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 disabled:hover:bg-transparent text-slate-700"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span>Previous</span>
+          </button>
 
-      {/* Comparison Image */}
-      <div className="flex-1">
-        {(() => {
-          if (isLoading) {
-            console.log('[ComparisonView RENDER] Showing loading spinner');
-            return (
-              <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                <div className="relative mb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-20 absolute inset-0 animate-ping"></div>
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                    <Loader2 className="w-10 h-10 animate-spin text-white" strokeWidth={2.5} />
-                  </div>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-slate-500">Screenshot</span>
+            <span className="px-3 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 font-semibold rounded-lg">
+              {currentIndex + 1} / {screenshots.length}
+            </span>
+          </div>
+
+          <button
+            onClick={goToNext}
+            disabled={!hasNext}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 disabled:hover:bg-transparent text-slate-700"
+          >
+            <span>Next</span>
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      {/* Main comparison area */}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        {/* Base Image */}
+        <div className="flex-1 min-h-0 border-r-2 border-slate-200">
+          {isLoadingBase ? (
+            <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+              <div className="relative mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-20 absolute inset-0 animate-ping"></div>
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-white" strokeWidth={2.5} />
                 </div>
-                <p className="text-slate-700 font-semibold mb-1">Loading comparison</p>
-                <p className="text-sm text-slate-500">Fetching {compareRef}...</p>
               </div>
-            );
-          } else if (compareImage) {
-            console.log('[ComparisonView RENDER] Rendering compareImage ImageViewer');
-            return (
-              <ImageViewer
-                key={`${compareRef}-${selectedScreenshot.relative_path}`}
-                src={compareImage}
-                alt={`${selectedScreenshot.name} (compare)`}
-                label={`Compare: ${compareRef}`}
-              />
-            );
-          } else {
-            console.log('[ComparisonView RENDER] Showing "Image not found" message');
-            return (
-              <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-orange-100 flex items-center justify-center">
-                  <FileQuestion className="w-10 h-10 text-orange-600" />
+              <p className="text-slate-700 font-semibold mb-1">Loading base image</p>
+              <p className="text-sm text-slate-500">Fetching {baseRef}...</p>
+            </div>
+          ) : baseImage ? (
+            <ImageViewer
+              key={`${baseRef}-${selectedScreenshot?.relative_path}`}
+              src={baseImage}
+              alt={selectedScreenshot?.name || 'Base'}
+              label={`Base: ${baseRef}`}
+            />
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-orange-100 flex items-center justify-center">
+                <FileQuestion className="w-10 h-10 text-orange-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Image not found</h3>
+              <p className="text-sm text-slate-500 text-center max-w-sm px-4">
+                This screenshot doesn't exist in <span className="font-medium">{baseRef}</span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Compare Image */}
+        <div className="flex-1 min-h-0">
+          {isLoadingCompare ? (
+            <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+              <div className="relative mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-20 absolute inset-0 animate-ping"></div>
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-white" strokeWidth={2.5} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Image not found</h3>
-                <p className="text-sm text-slate-500 text-center max-w-sm px-4">
-                  This screenshot doesn't exist in <span className="font-medium">{compareRef}</span>
-                </p>
               </div>
-            );
-          }
-        })()}
+              <p className="text-slate-700 font-semibold mb-1">Loading comparison</p>
+              <p className="text-sm text-slate-500">Fetching {compareRef}...</p>
+            </div>
+          ) : compareImage ? (
+            <ImageViewer
+              key={`${compareRef}-${selectedScreenshot?.relative_path}`}
+              src={compareImage}
+              alt={`${selectedScreenshot?.name} (compare)` || 'Compare'}
+              label={`Compare: ${compareRef}`}
+            />
+          ) : compareRef ? (
+            <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-orange-100 flex items-center justify-center">
+                <FileQuestion className="w-10 h-10 text-orange-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Image not found</h3>
+              <p className="text-sm text-slate-500 text-center max-w-sm px-4">
+                This screenshot doesn't exist in <span className="font-medium">{compareRef}</span>
+              </p>
+            </div>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-100 flex items-center justify-center">
+                <Camera className="w-10 h-10 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Select compare branch</h3>
+              <p className="text-sm text-slate-500">Choose a branch to compare with</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

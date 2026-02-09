@@ -1,13 +1,48 @@
+import { useEffect } from 'react';
 import { useAppStore } from './stores/appStore';
 import { RepositoryPicker } from './components/RepositoryPicker';
 import { ScreenshotList } from './components/ScreenshotList';
 import { ComparisonView } from './components/ComparisonView';
 import { BranchSelector } from './components/BranchSelector';
 import { GitBranch, FolderOpen, Camera } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { Screenshot } from './types';
 import './App.css';
 
 function App() {
-  const { repoPath, currentBranch, screenshots, error, reset } = useAppStore();
+  const { repoPath, currentBranch, baseRef, screenshots, error, reset, setScreenshots, setError } = useAppStore();
+
+  // Load screenshots when baseRef changes
+  useEffect(() => {
+    const loadScreenshots = async () => {
+      if (!repoPath || !baseRef) {
+        setScreenshots([]);
+        return;
+      }
+
+      try {
+        console.log('[App] Loading screenshots from baseRef:', baseRef);
+        const shots = await invoke<Screenshot[]>('scan_screenshots_at_ref', {
+          repoPath,
+          gitRef: baseRef,
+        });
+        console.log('[App] Loaded screenshots:', shots.length);
+        setScreenshots(shots);
+        
+        if (shots.length === 0) {
+          setError(`No screenshots found in ${baseRef}`);
+        } else {
+          setError(null);
+        }
+      } catch (err) {
+        console.error('[App] Error loading screenshots:', err);
+        setError(String(err));
+        setScreenshots([]);
+      }
+    };
+
+    loadScreenshots();
+  }, [repoPath, baseRef]);
 
   if (!repoPath) {
     return <RepositoryPicker />;
@@ -40,7 +75,8 @@ function App() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <BranchSelector />
+            <BranchSelector mode="base" label="Base" />
+            <BranchSelector mode="compare" label="Compare" />
             <button
               onClick={reset}
               className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"

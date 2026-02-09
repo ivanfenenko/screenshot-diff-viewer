@@ -11,6 +11,8 @@ export interface AppState {
   tags: string[];
   screenshots: Screenshot[];
   selectedScreenshot: Screenshot | null;
+  baseRef: string | null;
+  baseRefType: 'branch' | 'tag' | 'commit' | null;
   compareRef: string | null;
   compareRefType: 'branch' | 'tag' | 'commit' | null;
   isLoading: boolean;

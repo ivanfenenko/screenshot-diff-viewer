@@ -62,10 +62,10 @@ export const ImageViewer = ({ src, alt, label }: ImageViewerProps) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white min-h-0">
       {/* Header with label and dimensions */}
       {label && (
-        <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
+        <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200 flex-shrink-0">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-sm text-slate-700">{label}</span>
             {dimensions && !isLoading && (
@@ -79,7 +79,7 @@ export const ImageViewer = ({ src, alt, label }: ImageViewerProps) => {
       )}
 
       {/* Image container */}
-      <div className="flex-1 relative bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden flex items-center justify-center p-4">
+      <div className="flex-1 min-h-0 relative bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
         {/* Loading state overlay */}
         {isLoading && (
           <>
@@ -118,14 +118,15 @@ export const ImageViewer = ({ src, alt, label }: ImageViewerProps) => {
           alt={alt}
           onLoad={handleLoad}
           onError={handleError}
-          className="rounded-lg shadow-xl"
+          className="rounded-lg shadow-lg"
           style={{ 
             visibility: isLoading || error ? 'hidden' : 'visible',
-            maxWidth: '100%',
-            maxHeight: '100%',
+            maxWidth: 'calc(100% - 2rem)',
+            maxHeight: 'calc(100% - 2rem)',
             width: 'auto',
             height: 'auto',
-            objectFit: 'contain'
+            objectFit: 'contain',
+            display: 'block'
           }}
         />
       </div>

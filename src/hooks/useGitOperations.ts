@@ -1,7 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useAppStore } from '../stores/appStore';
-import { Screenshot } from '../types';
 
 export const useGitOperations = () => {
   const {
@@ -10,6 +9,7 @@ export const useGitOperations = () => {
     setBranches,
     setTags,
     setScreenshots,
+    setBaseRef,
     setLoading,
     setError,
   } = useAppStore();
@@ -44,21 +44,19 @@ export const useGitOperations = () => {
       setRepoPath(path);
 
       // Load git info in parallel
-      const [branch, branches, tags, screenshots] = await Promise.all([
+      const [branch, branches, tags] = await Promise.all([
         invoke<string>('get_current_branch', { repoPath: path }),
         invoke<string[]>('list_branches', { repoPath: path }),
         invoke<string[]>('list_tags', { repoPath: path }),
-        invoke<Screenshot[]>('scan_screenshots', { repoPath: path }),
       ]);
 
       setCurrentBranch(branch);
       setBranches(branches);
       setTags(tags);
-      setScreenshots(screenshots);
-
-      if (screenshots.length === 0) {
-        setError('No screenshots found in this repository');
-      }
+      
+      // Set the current branch as the base ref by default
+      // This will trigger screenshot loading in App.tsx
+      setBaseRef(branch, 'branch');
 
       setLoading(false);
     } catch (error) {

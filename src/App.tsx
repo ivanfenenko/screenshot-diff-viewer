@@ -97,9 +97,10 @@ function App() {
               </div>
             </div>
 
-            {/* Current Branch Badge */}
+            {/* Working Directory Badge */}
             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-sm">
               <GitBranch className="w-4 h-4 text-slate-600" />
+              <span className="text-slate-500 text-xs mr-1">Working Directory:</span>
               <span className="font-medium text-slate-700">{currentBranch}</span>
             </div>
           </div>

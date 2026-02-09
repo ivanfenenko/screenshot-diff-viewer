@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from './stores/appStore';
+import { useGitOperations } from './hooks/useGitOperations';
 import { RepositoryPicker } from './components/RepositoryPicker';
 import { ScreenshotList } from './components/ScreenshotList';
 import { ComparisonView } from './components/ComparisonView';
@@ -7,10 +8,40 @@ import { BranchSelector } from './components/BranchSelector';
 import { GitBranch, FolderOpen, Camera } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { Screenshot } from './types';
+import { Store } from '@tauri-apps/plugin-store';
 import './App.css';
 
 function App() {
   const { repoPath, currentBranch, baseRef, screenshots, error, reset, setScreenshots, setError } = useAppStore();
+  const { selectRepository } = useGitOperations();
+
+  // Load last used repository on startup
+  useEffect(() => {
+    const loadLastRepo = async () => {
+      try {
+        const store = await Store.load('settings.json');
+        const lastRepoPath = await store.get<string>('lastRepoPath');
+        
+        if (lastRepoPath && !repoPath) {
+          console.log('[App] Loading last used repository:', lastRepoPath);
+          // Validate that the repo still exists and is valid
+          const isValid = await invoke<boolean>('validate_repository', { path: lastRepoPath });
+          if (isValid) {
+            await selectRepository(lastRepoPath);
+          } else {
+            console.log('[App] Last used repository is no longer valid');
+            // Clear invalid path from storage
+            await store.set('lastRepoPath', null);
+            await store.save();
+          }
+        }
+      } catch (error) {
+        console.error('[App] Error loading last repository:', error);
+      }
+    };
+
+    loadLastRepo();
+  }, []);
 
   // Load screenshots when baseRef changes
   useEffect(() => {

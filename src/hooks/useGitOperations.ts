@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useAppStore } from '../stores/appStore';
+import { Store } from '@tauri-apps/plugin-store';
 
 export const useGitOperations = () => {
   const {
@@ -14,23 +15,31 @@ export const useGitOperations = () => {
     setError,
   } = useAppStore();
 
-  const selectRepository = async () => {
+  const selectRepository = async (providedPath?: string) => {
     try {
       setLoading(true);
       setError(null);
 
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: 'Select Git Repository',
-      });
+      let path: string;
 
-      if (!selected) {
-        setLoading(false);
-        return;
+      if (providedPath) {
+        // Use provided path (e.g., from persistent storage)
+        path = providedPath;
+      } else {
+        // Show dialog to select directory
+        const selected = await open({
+          directory: true,
+          multiple: false,
+          title: 'Select Git Repository',
+        });
+
+        if (!selected) {
+          setLoading(false);
+          return;
+        }
+
+        path = selected as string;
       }
-
-      const path = selected as string;
 
       // Validate it's a git repository
       const isValid = await invoke<boolean>('validate_repository', { path });
@@ -42,6 +51,11 @@ export const useGitOperations = () => {
       }
 
       setRepoPath(path);
+
+      // Save to persistent storage
+      const store = await Store.load('settings.json');
+      await store.set('lastRepoPath', path);
+      await store.save();
 
       // Load git info in parallel
       const [branch, branches, tags] = await Promise.all([

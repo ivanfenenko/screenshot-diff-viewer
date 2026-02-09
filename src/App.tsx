@@ -64,7 +64,7 @@ function App() {
         setScreenshots(shots);
         
         if (shots.length === 0) {
-          setError(`No screenshots found in ${baseRef}`);
+          setError(`No screenshots found in ${repoName || 'repository'} on branch "${baseRef}"`);
         } else {
           setError(null);
         }

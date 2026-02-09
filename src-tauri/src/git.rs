@@ -195,3 +195,50 @@ pub fn list_files_at_ref(
         Ok(Vec::new())
     }
 }
+
+/// Returns true if path looks like a screenshot test file (not build/drawable assets).
+fn is_screenshot_test_path(path: &str) -> bool {
+    let path = path.replace('\\', "/");
+    if !path.ends_with(".png") {
+        return false;
+    }
+    // Paparazzi / Android screenshot tests: **/snapshots/**/images/*.png
+    if path.contains("snapshots") && path.contains("/images/") {
+        return true;
+    }
+    // Common dir names for screenshot tests
+    if path.contains("/screenshots/") || path.contains("/__snapshots__/") {
+        return true;
+    }
+    false
+}
+
+/// List all screenshot PNG paths in the repo at a given Git ref by scanning the full tree.
+/// Discovers paths like app/src/test/snapshots/<flavor>/images/*.png and similar.
+pub fn list_screenshot_pngs_at_ref(
+    repo_path: &Path,
+    git_ref: &str,
+) -> Result<Vec<String>, GitError> {
+    let tree_spec = format!("{}:", git_ref);
+
+    let output = Command::new("git")
+        .args(["ls-tree", "-r", "--name-only", &tree_spec])
+        .current_dir(repo_path)
+        .output()?;
+
+    if !output.status.success() {
+        return Err(GitError::from(format!(
+            "git ls-tree failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )));
+    }
+
+    let files: Vec<String> = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .filter(|s| is_screenshot_test_path(s))
+        .collect();
+
+    Ok(files)
+}

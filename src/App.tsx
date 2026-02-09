@@ -100,16 +100,10 @@ function App() {
               </div>
             </div>
 
-            {/* Repository and Working Branch Info */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-slate-50 rounded-lg text-sm border border-slate-200">
-                <FolderOpen className="w-4 h-4 text-slate-500" />
-                <span className="font-semibold text-slate-700">{repoName}</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-sm">
-                <GitBranch className="w-4 h-4 text-slate-600" />
-                <span className="font-medium text-slate-700">{currentBranch}</span>
-              </div>
+            {/* Repository Info */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-100 to-slate-50 rounded-lg text-sm border border-slate-200">
+              <FolderOpen className="w-4 h-4 text-slate-500" />
+              <span className="font-semibold text-slate-700">{repoName}</span>
             </div>
           </div>
 

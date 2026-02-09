@@ -91,17 +91,15 @@ export const BranchSelector = ({ mode, label }: BranchSelectorProps) => {
   return (
     <div className="relative">
       {selectedRef ? (
-        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 text-emerald-800 rounded-lg shadow-sm">
+        <div className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 text-emerald-800 rounded-lg text-sm">
           {getIcon()}
-          <span className="text-sm font-medium">
-            {displayLabel}: <span className="font-semibold">{getDisplayRef()}</span>
-          </span>
+          <span className="font-medium">{getDisplayRef()}</span>
           <button
             onClick={clearSelection}
-            className="ml-1 p-1 hover:bg-emerald-200 rounded transition-colors"
+            className="p-0.5 hover:bg-emerald-200 rounded transition-colors"
             title={`Clear ${displayLabel.toLowerCase()} selection`}
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       ) : (

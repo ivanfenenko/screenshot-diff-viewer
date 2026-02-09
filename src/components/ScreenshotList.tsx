@@ -48,7 +48,7 @@ export const ScreenshotList = () => {
   const isFolderExpanded = (folder: string) => !collapsedFolders.has(folder);
 
   return (
-    <div className="w-80 border-r border-slate-200 bg-white flex flex-col h-full shadow-sm">
+    <div className="w-full border-r border-slate-200 bg-white flex flex-col h-full shadow-sm min-w-0">
       {/* Header */}
       <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
         <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from './stores/appStore';
 import { useGitOperations } from './hooks/useGitOperations';
 import { RepositoryPicker } from './components/RepositoryPicker';
@@ -17,6 +17,36 @@ function App() {
 
   // Extract repository name from path
   const repoName = repoPath ? repoPath.split('/').pop() : '';
+
+  // Resizable left sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [resizing, setResizing] = useState(false);
+  const SIDEBAR_MIN = 220;
+  const SIDEBAR_MAX = 560;
+
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const onMove = (e: MouseEvent) => {
+      const w = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, e.clientX));
+      setSidebarWidth(w);
+    };
+    const onUp = () => setResizing(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizing]);
 
   // Load last used repository on startup
   useEffect(() => {
@@ -134,7 +164,15 @@ function App() {
       <div className="flex-1 flex overflow-hidden">
         {screenshots.length > 0 ? (
           <>
-            <ScreenshotList />
+            <div style={{ width: sidebarWidth, minWidth: sidebarWidth, flexShrink: 0 }} className="flex flex-col h-full overflow-hidden">
+              <ScreenshotList />
+            </div>
+            <div
+              role="separator"
+              aria-label="Resize sidebar"
+              onMouseDown={startResize}
+              className={`w-1 flex-shrink-0 bg-slate-200 hover:bg-blue-400 transition-colors cursor-col-resize ${resizing ? 'bg-blue-500' : ''}`}
+            />
             <ComparisonView />
           </>
         ) : (

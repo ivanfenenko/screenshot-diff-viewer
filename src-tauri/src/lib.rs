@@ -22,6 +22,11 @@ fn list_branches(repo_path: String) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
+fn list_remote_branches(repo_path: String) -> Result<Vec<String>, String> {
+    git::list_remote_branches(Path::new(&repo_path)).map_err(|e| e.message)
+}
+
+#[tauri::command]
 fn list_tags(repo_path: String) -> Result<Vec<String>, String> {
     git::list_tags(Path::new(&repo_path)).map_err(|e| e.message)
 }
@@ -146,6 +151,7 @@ pub fn run() {
             validate_repository,
             get_current_branch,
             list_branches,
+            list_remote_branches,
             list_tags,
             validate_commit,
             scan_screenshots,

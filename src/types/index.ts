@@ -8,6 +8,7 @@ export interface AppState {
   repoPath: string | null;
   currentBranch: string | null;
   branches: string[];
+  remoteBranches: string[];
   tags: string[];
   screenshots: Screenshot[];
   selectedScreenshot: Screenshot | null;

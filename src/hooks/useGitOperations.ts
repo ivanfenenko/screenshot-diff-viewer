@@ -8,6 +8,7 @@ export const useGitOperations = () => {
     setRepoPath,
     setCurrentBranch,
     setBranches,
+    setRemoteBranches,
     setTags,
     setScreenshots,
     setBaseRef,
@@ -57,15 +58,17 @@ export const useGitOperations = () => {
       await store.set('lastRepoPath', path);
       await store.save();
 
-      // Load git info in parallel
-      const [branch, branches, tags] = await Promise.all([
+      // Load git info in parallel (local branches, remote branches, tags)
+      const [branch, branches, remoteBranches, tags] = await Promise.all([
         invoke<string>('get_current_branch', { repoPath: path }),
         invoke<string[]>('list_branches', { repoPath: path }),
+        invoke<string[]>('list_remote_branches', { repoPath: path }).catch(() => []),
         invoke<string[]>('list_tags', { repoPath: path }),
       ]);
 
       setCurrentBranch(branch);
       setBranches(branches);
+      setRemoteBranches(remoteBranches);
       setTags(tags);
       
       // Set the current branch as the base ref by default

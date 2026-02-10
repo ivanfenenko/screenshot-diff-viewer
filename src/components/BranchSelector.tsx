@@ -12,6 +12,7 @@ export const BranchSelector = ({ mode, label }: BranchSelectorProps) => {
   const {
     currentBranch,
     branches,
+    remoteBranches,
     tags,
     baseRef,
     baseRefType,
@@ -64,6 +65,10 @@ export const BranchSelector = ({ mode, label }: BranchSelectorProps) => {
   };
 
   const filteredBranches = branches.filter((branch) =>
+    branch.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredRemoteBranches = remoteBranches.filter((branch) =>
     branch.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -176,27 +181,54 @@ export const BranchSelector = ({ mode, label }: BranchSelectorProps) => {
             <div className="max-h-96 overflow-y-auto">
               {activeTab === 'branch' && (
                 <div className="p-2">
-                  {filteredBranches.length > 0 ? (
-                    filteredBranches.map((branch) => (
-                      <button
-                        key={branch}
-                        onClick={() => handleSelectBranch(branch)}
-                        className="w-full text-left px-3 py-2.5 hover:bg-blue-50 rounded-lg flex items-center justify-between group transition-colors"
-                      >
-                        <span className="text-sm text-slate-700 group-hover:text-blue-700 font-medium">
-                          {branch}
-                        </span>
-                        {branch === currentBranch && (
-                          <span className="flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                            <Check className="w-3 h-3" />
-                            current
-                          </span>
-                        )}
-                      </button>
-                    ))
+                  {filteredBranches.length > 0 || filteredRemoteBranches.length > 0 ? (
+                    <>
+                      {filteredBranches.length > 0 && (
+                        <>
+                          <p className="px-2 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                            Local
+                          </p>
+                          {filteredBranches.map((branch) => (
+                            <button
+                              key={branch}
+                              onClick={() => handleSelectBranch(branch)}
+                              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 rounded-lg flex items-center justify-between group transition-colors"
+                            >
+                              <span className="text-sm text-slate-700 group-hover:text-blue-700 font-medium">
+                                {branch}
+                              </span>
+                              {branch === currentBranch && (
+                                <span className="flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                                  <Check className="w-3 h-3" />
+                                  current
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </>
+                      )}
+                      {filteredRemoteBranches.length > 0 && (
+                        <>
+                          <p className="px-2 py-1.5 mt-2 text-xs font-semibold text-slate-500 uppercase tracking-wide border-t border-slate-100 pt-2">
+                            Remote
+                          </p>
+                          {filteredRemoteBranches.map((branch) => (
+                            <button
+                              key={branch}
+                              onClick={() => handleSelectBranch(branch)}
+                              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 rounded-lg flex items-center justify-between group transition-colors"
+                            >
+                              <span className="text-sm text-slate-700 group-hover:text-blue-700 font-medium">
+                                {branch}
+                              </span>
+                            </button>
+                          ))}
+                        </>
+                      )}
+                    </>
                   ) : (
                     <div className="p-8 text-center text-slate-500 text-sm">
-                      No branches found
+                      No branches found. Run <code className="bg-slate-100 px-1 rounded">git fetch</code> to see remote branches.
                     </div>
                   )}
                 </div>

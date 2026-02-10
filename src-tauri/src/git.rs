@@ -66,6 +66,27 @@ pub fn list_branches(repo_path: &Path) -> Result<Vec<String>, GitError> {
     }
 }
 
+/// List all remote-tracking branches (e.g. origin/main, origin/feature/foo).
+/// Requires at least one fetch to have been run; returns empty list if no remotes.
+pub fn list_remote_branches(repo_path: &Path) -> Result<Vec<String>, GitError> {
+    let output = Command::new("git")
+        .args(["branch", "-r", "--format=%(refname:short)"])
+        .current_dir(repo_path)
+        .output()?;
+
+    if output.status.success() {
+        let branches: Vec<String> = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .filter(|s| !s.ends_with("/HEAD")) // skip symbolic ref like origin/HEAD
+            .collect();
+        Ok(branches)
+    } else {
+        Err(GitError::from("Failed to list remote branches".to_string()))
+    }
+}
+
 /// List all tags
 pub fn list_tags(repo_path: &Path) -> Result<Vec<String>, GitError> {
     let output = Command::new("git")

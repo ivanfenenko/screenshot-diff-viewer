@@ -6,6 +6,7 @@ interface AppStore extends AppState {
   setRepoPath: (path: string) => void;
   setCurrentBranch: (branch: string) => void;
   setBranches: (branches: string[]) => void;
+  setRemoteBranches: (remoteBranches: string[]) => void;
   setTags: (tags: string[]) => void;
   setScreenshots: (screenshots: Screenshot[]) => void;
   setSelectedScreenshot: (screenshot: Screenshot | null) => void;
@@ -20,6 +21,7 @@ const initialState: AppState = {
   repoPath: null,
   currentBranch: null,
   branches: [],
+  remoteBranches: [],
   tags: [],
   screenshots: [],
   selectedScreenshot: null,
@@ -41,6 +43,7 @@ export const useAppStore = create<AppStore>((set) => ({
   },
   setCurrentBranch: (branch) => set({ currentBranch: branch }),
   setBranches: (branches) => set({ branches }),
+  setRemoteBranches: (remoteBranches) => set({ remoteBranches }),
   setTags: (tags) => set({ tags }),
   setScreenshots: (screenshots) => set({ screenshots }),
   setSelectedScreenshot: (screenshot) => set({ selectedScreenshot: screenshot }),

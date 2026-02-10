@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { useGitOperations } from '../hooks/useGitOperations';
 import { ImageViewer } from './ImageViewer';
-import { Camera, FileQuestion, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Camera, FileQuestion, Loader2, ChevronLeft, ChevronRight, Columns2, Columns3 } from 'lucide-react';
 import { imageCache } from '../utils/imageCache';
+import { createDiffImageDataUrl } from '../utils/imageDiff';
 
 export const ComparisonView = () => {
   const {
@@ -19,8 +20,11 @@ export const ComparisonView = () => {
 
   const [baseImage, setBaseImage] = useState<string | null>(null);
   const [compareImage, setCompareImage] = useState<string | null>(null);
+  const [diffImage, setDiffImage] = useState<string | null>(null);
   const [isLoadingBase, setIsLoadingBase] = useState(false);
   const [isLoadingCompare, setIsLoadingCompare] = useState(false);
+  const [isLoadingDiff, setIsLoadingDiff] = useState(false);
+  const [showDiffPane, setShowDiffPane] = useState(true);
 
   console.log('[ComparisonView RENDER] State:', {
     isLoadingBase,
@@ -192,6 +196,27 @@ export const ComparisonView = () => {
     loadCompareImage();
   }, [selectedScreenshot, repoPath, compareRef]);
 
+  // Compute diff image when both base and compare are loaded
+  useEffect(() => {
+    if (!baseImage || !compareImage) {
+      setDiffImage(null);
+      setIsLoadingDiff(false);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingDiff(true);
+    setDiffImage(null);
+    createDiffImageDataUrl(baseImage, compareImage).then((url) => {
+      if (!cancelled) {
+        setDiffImage(url);
+        setIsLoadingDiff(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [baseImage, compareImage]);
+
   if (!selectedScreenshot) {
     console.log('[ComparisonView RENDER] Showing "Select a screenshot" message');
     return (
@@ -246,6 +271,25 @@ export const ComparisonView = () => {
             <span className="px-3 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 font-semibold rounded-lg">
               {currentIndex + 1} / {screenshots.length}
             </span>
+            {compareRef && (
+              <button
+                type="button"
+                onClick={() => setShowDiffPane((v) => !v)}
+                title={showDiffPane ? 'Hide diff view' : 'Show diff view'}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  showDiffPane
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {showDiffPane ? (
+                  <Columns3 className="w-4 h-4" />
+                ) : (
+                  <Columns2 className="w-4 h-4" />
+                )}
+                <span>Diff</span>
+              </button>
+            )}
           </div>
 
           <button
@@ -255,6 +299,23 @@ export const ComparisonView = () => {
           >
             <span>Next</span>
             <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      {/* Diff toggle bar (when comparing but nav bar might be hidden, e.g. single screenshot) */}
+      {compareRef && (!selectedScreenshot || screenshots.length <= 1) && (
+        <div className="bg-white border-b border-slate-200 px-4 py-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowDiffPane((v) => !v)}
+            title={showDiffPane ? 'Hide diff view' : 'Show diff view'}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              showDiffPane ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {showDiffPane ? <Columns3 className="w-4 h-4" /> : <Columns2 className="w-4 h-4" />}
+            <span>Diff</span>
           </button>
         </div>
       )}
@@ -293,6 +354,47 @@ export const ComparisonView = () => {
             </div>
           )}
         </div>
+
+        {/* Diff pane (only when compare ref is selected and toggle is on) */}
+        {compareRef && showDiffPane && (
+          <div className="flex-1 min-h-0 border-r-2 border-slate-200">
+            {isLoadingDiff ? (
+              <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-20 absolute inset-0 animate-ping"></div>
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <Loader2 className="w-10 h-10 animate-spin text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+                <p className="text-slate-700 font-semibold mb-1">Computing diff</p>
+                <p className="text-sm text-slate-500">Highlighting pixel differences...</p>
+              </div>
+            ) : diffImage ? (
+              <ImageViewer
+                key={`diff-${selectedScreenshot?.relative_path}`}
+                src={diffImage}
+                alt={`Diff: ${selectedScreenshot?.name}`}
+                label="Diff"
+              />
+            ) : baseImage && compareImage ? (
+              <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
+                  <FileQuestion className="w-10 h-10 text-amber-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 mb-2">Cannot compute diff</h3>
+                <p className="text-sm text-slate-500 text-center max-w-sm px-4">
+                  Different dimensions between base and compare images
+                </p>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+                <p className="text-sm text-slate-500 text-center max-w-sm px-4">
+                  Load both images to see diff
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Compare Image */}
         <div className="flex-1 min-h-0">

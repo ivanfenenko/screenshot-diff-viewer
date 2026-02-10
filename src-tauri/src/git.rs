@@ -223,12 +223,17 @@ fn is_screenshot_test_path(path: &str) -> bool {
     if !path.ends_with(".png") {
         return false;
     }
+    let path_lower = path.to_lowercase();
     // Paparazzi / Android screenshot tests: **/snapshots/**/images/*.png
-    if path.contains("snapshots") && path.contains("/images/") {
+    if path_lower.contains("snapshots") && path_lower.contains("/images/") {
         return true;
     }
-    // Common dir names for screenshot tests
-    if path.contains("/screenshots/") || path.contains("/__snapshots__/") {
+    // Common dir names for screenshot tests (case-insensitive for __Snapshots__)
+    if path_lower.contains("/screenshots/") || path_lower.contains("/__snapshots__/") {
+        return true;
+    }
+    // iOS SnapshotTests: e.g. SnapshotTests/Home/__Snapshots__/*.png
+    if path_lower.contains("snapshottests/") {
         return true;
     }
     false

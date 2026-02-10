@@ -10,7 +10,6 @@ export const useGitOperations = () => {
     setBranches,
     setRemoteBranches,
     setTags,
-    setScreenshots,
     setBaseRef,
     setLoading,
     setError,

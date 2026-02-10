@@ -5,14 +5,14 @@ import { RepositoryPicker } from './components/RepositoryPicker';
 import { ScreenshotList } from './components/ScreenshotList';
 import { ComparisonView } from './components/ComparisonView';
 import { BranchSelector } from './components/BranchSelector';
-import { GitBranch, FolderOpen, Camera, CornerUpLeft } from 'lucide-react';
+import { FolderOpen, Camera, CornerUpLeft } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { Screenshot } from './types';
 import { Store } from '@tauri-apps/plugin-store';
 import './App.css';
 
 function App() {
-  const { repoPath, currentBranch, baseRef, screenshots, error, reset, setScreenshots, setError } = useAppStore();
+  const { repoPath, baseRef, screenshots, error, reset, setScreenshots, setError } = useAppStore();
   const { selectRepository } = useGitOperations();
 
   // Extract repository name from path

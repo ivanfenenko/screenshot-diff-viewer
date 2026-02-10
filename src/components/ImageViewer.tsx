@@ -83,7 +83,6 @@ export const ImageViewer = ({ src, alt, label }: ImageViewerProps) => {
         {/* Loading state overlay */}
         {isLoading && (
           <>
-            {console.log('[ImageViewer RENDER] Showing loading overlay')}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gradient-to-br from-slate-50 to-slate-100">
               <div className="relative">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-20 absolute inset-0 animate-ping"></div>
@@ -99,7 +98,6 @@ export const ImageViewer = ({ src, alt, label }: ImageViewerProps) => {
         {/* Error state overlay */}
         {error && (
           <>
-            {console.log('[ImageViewer RENDER] Showing error overlay')}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-gradient-to-br from-slate-50 to-slate-100">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-3">
                 <AlertCircle className="w-8 h-8 text-red-600" />
@@ -111,7 +109,6 @@ export const ImageViewer = ({ src, alt, label }: ImageViewerProps) => {
         )}
 
         {/* Image - always rendered but hidden behind loading/error overlay */}
-        {console.log('[ImageViewer RENDER] Rendering img element, visibility:', isLoading || error ? 'hidden' : 'visible')}
         <img
           ref={imgRef}
           src={src}

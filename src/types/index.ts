@@ -2,6 +2,7 @@ export interface Screenshot {
   name: string;
   relative_path: string;
   absolute_path: string;
+  status?: 'new' | 'deleted' | 'unchanged';
 }
 
 export interface AppState {

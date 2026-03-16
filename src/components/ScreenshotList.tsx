@@ -1,18 +1,34 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Image as ImageIcon, ChevronDown, ChevronRight, Folder } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import type { Screenshot } from '../types';
 import { getScreenshotDisplayName, getScreenshotDisplayInitial } from '../utils/screenshotDisplayName';
 
 export const ScreenshotList = () => {
-  const { screenshots, selectedScreenshot, setSelectedScreenshot } = useAppStore();
+  const { screenshots, selectedScreenshot, setSelectedScreenshot, compareRef } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'deleted'>('all');
   // Track which folders are collapsed (simpler than "expanded" — no empty-means-all ambiguity)
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
 
-  const filteredScreenshots = screenshots.filter((screenshot) =>
-    screenshot.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Reset filter to 'all' when compareRef changes or is cleared
+  useEffect(() => {
+    setStatusFilter('all');
+  }, [compareRef]);
+
+  const filteredScreenshots = screenshots.filter((screenshot) => {
+    // Apply search filter
+    const matchesSearch = screenshot.name.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+
+    // Apply status filter only if compareRef is set
+    if (compareRef && statusFilter !== 'all') {
+      if (statusFilter === 'new' && screenshot.status !== 'new') return false;
+      if (statusFilter === 'deleted' && screenshot.status !== 'deleted') return false;
+    }
+
+    return true;
+  });
 
   const groups = useMemo(() => {
     const map = new Map<string, Screenshot[]>();
@@ -70,6 +86,51 @@ export const ScreenshotList = () => {
             className="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
           />
         </div>
+
+        {/* Status Filters - Only show when comparing branches */}
+        {compareRef && (
+          <div className="mt-3 flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="radio"
+                name="statusFilter"
+                value="all"
+                checked={statusFilter === 'all'}
+                onChange={(e) => setStatusFilter(e.target.value as 'all')}
+                className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-xs font-medium text-slate-700 group-hover:text-slate-900">
+                All
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="radio"
+                name="statusFilter"
+                value="new"
+                checked={statusFilter === 'new'}
+                onChange={(e) => setStatusFilter(e.target.value as 'new')}
+                className="w-4 h-4 text-green-600 border-slate-300 focus:ring-2 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-xs font-medium text-slate-700 group-hover:text-slate-900">
+                <span className="text-green-700">New</span>
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="radio"
+                name="statusFilter"
+                value="deleted"
+                checked={statusFilter === 'deleted'}
+                onChange={(e) => setStatusFilter(e.target.value as 'deleted')}
+                className="w-4 h-4 text-red-600 border-slate-300 focus:ring-2 focus:ring-red-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-xs font-medium text-slate-700 group-hover:text-slate-900">
+                <span className="text-red-700">Deleted</span>
+              </span>
+            </label>
+          </div>
+        )}
         
         {/* Count */}
         <div className="mt-3 flex items-center justify-between text-xs flex-wrap gap-y-1">
@@ -155,15 +216,27 @@ export const ScreenshotList = () => {
                           {getScreenshotDisplayInitial(getScreenshotDisplayName(screenshot.name))}
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col items-end overflow-hidden">
-                          <div
-                            className={`font-medium text-sm w-full text-right overflow-hidden text-ellipsis whitespace-nowrap [direction:rtl] ${
-                              selectedScreenshot?.relative_path === screenshot.relative_path
-                                ? 'text-blue-900'
-                                : 'text-slate-900'
-                            }`}
-                            title={getScreenshotDisplayName(screenshot.name)}
-                          >
-                            {getScreenshotDisplayName(screenshot.name)}
+                          <div className="flex items-center gap-2 w-full justify-end">
+                            {screenshot.status === 'new' && (
+                              <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 rounded">
+                                New
+                              </span>
+                            )}
+                            {screenshot.status === 'deleted' && (
+                              <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-700 rounded">
+                                Deleted
+                              </span>
+                            )}
+                            <div
+                              className={`font-medium text-sm text-right overflow-hidden text-ellipsis whitespace-nowrap [direction:rtl] ${
+                                selectedScreenshot?.relative_path === screenshot.relative_path
+                                  ? 'text-blue-900'
+                                  : 'text-slate-900'
+                              }`}
+                              title={getScreenshotDisplayName(screenshot.name)}
+                            >
+                              {getScreenshotDisplayName(screenshot.name)}
+                            </div>
                           </div>
                           <div className="text-xs text-slate-500 mt-0.5 w-full text-right overflow-hidden text-ellipsis whitespace-nowrap [direction:rtl]" title={screenshot.name}>
                             {screenshot.name}

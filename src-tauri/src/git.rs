@@ -158,10 +158,13 @@ pub fn extract_lfs_oid(content: &[u8]) -> Option<String> {
     None
 }
 
-/// Fetch LFS file by pulling specific path
-pub fn fetch_lfs_file(repo_path: &Path, file_path: &str) -> Result<(), GitError> {
+/// Fetch LFS objects from a specific git ref
+/// This fetches LFS objects for the given ref (branch, tag, or commit)
+pub fn fetch_lfs_objects_for_ref(repo_path: &Path, git_ref: &str) -> Result<(), GitError> {
+    // Use git lfs fetch with the specific ref
+    // This will fetch all LFS objects referenced by that ref
     let output = Command::new("git")
-        .args(["lfs", "pull", "--include", file_path])
+        .args(["lfs", "fetch", "origin", git_ref])
         .current_dir(repo_path)
         .output()?;
 
@@ -169,10 +172,9 @@ pub fn fetch_lfs_file(repo_path: &Path, file_path: &str) -> Result<(), GitError>
         Ok(())
     } else {
         let error_msg = String::from_utf8_lossy(&output.stderr);
-        Err(GitError::from(format!(
-            "Failed to fetch LFS file: {}",
-            error_msg
-        )))
+        // Don't fail if LFS fetch fails - the file might not be LFS or might already be cached
+        eprintln!("LFS fetch warning for {}: {}", git_ref, error_msg);
+        Ok(())
     }
 }
 

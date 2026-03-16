@@ -121,16 +121,24 @@ fn get_file_at_ref(
         if let Some(oid) = git::extract_lfs_oid(&content) {
             let lfs_path = git::get_lfs_object_path(Path::new(&repo_path), &oid);
 
-            // If LFS object doesn't exist, try to fetch it
+            // If LFS object doesn't exist locally, try to fetch it from the remote
             if !lfs_path.exists() {
-                git::fetch_lfs_file(Path::new(&repo_path), &file_path).map_err(|e| e.message)?;
+                // Try to fetch LFS objects for this ref
+                // We ignore errors here because the fetch might fail for various reasons
+                // but we still want to check if the object exists locally
+                let _ = git::fetch_lfs_objects_for_ref(Path::new(&repo_path), &git_ref);
             }
 
-            // Read the actual LFS file
+            // Read the actual LFS file if it exists now
             if lfs_path.exists() {
                 let lfs_content = std::fs::read(&lfs_path)
                     .map_err(|e| format!("Failed to read LFS file: {}", e))?;
                 return Ok(general_purpose::STANDARD.encode(&lfs_content));
+            } else {
+                return Err(format!(
+                    "LFS object {} not found locally. Try running 'git lfs fetch {}' manually.",
+                    oid, git_ref
+                ));
             }
         }
     }

@@ -12,7 +12,7 @@ import { Store } from '@tauri-apps/plugin-store';
 import './App.css';
 
 function App() {
-  const { repoPath, baseRef, screenshots, error, reset, setScreenshots, setError } = useAppStore();
+  const { repoPath, baseRef, compareRef, screenshots, error, reset, setScreenshots, setError } = useAppStore();
   const { selectRepository } = useGitOperations();
 
   // Extract repository name from path
@@ -76,7 +76,7 @@ function App() {
     loadLastRepo();
   }, []);
 
-  // Load screenshots when baseRef changes
+  // Load screenshots when baseRef or compareRef changes
   useEffect(() => {
     const loadScreenshots = async () => {
       if (!repoPath || !baseRef) {
@@ -86,14 +86,54 @@ function App() {
 
       try {
         console.log('[App] Loading screenshots from baseRef:', baseRef);
-        const shots = await invoke<Screenshot[]>('scan_screenshots_at_ref', {
+        const baseShots = await invoke<Screenshot[]>('scan_screenshots_at_ref', {
           repoPath,
           gitRef: baseRef,
         });
-        console.log('[App] Loaded screenshots:', shots.length);
-        setScreenshots(shots);
+        console.log('[App] Loaded screenshots from baseRef:', baseShots.length);
+
+        let compareShots: Screenshot[] = [];
+        if (compareRef) {
+          console.log('[App] Loading screenshots from compareRef:', compareRef);
+          compareShots = await invoke<Screenshot[]>('scan_screenshots_at_ref', {
+            repoPath,
+            gitRef: compareRef,
+          });
+          console.log('[App] Loaded screenshots from compareRef:', compareShots.length);
+        }
+
+        // Compute status for each screenshot
+        let shotsWithStatus: Screenshot[];
         
-        if (shots.length === 0) {
+        if (compareRef && compareShots.length > 0) {
+          // Create a set of compare screenshot paths for quick lookup
+          const compareSet = new Set(compareShots.map(s => s.relative_path));
+          const baseSet = new Set(baseShots.map(s => s.relative_path));
+
+          // Mark base screenshots as NEW if not in compare (they were added)
+          const baseShotsWithStatus = baseShots.map(shot => ({
+            ...shot,
+            status: compareSet.has(shot.relative_path) ? 'unchanged' as const : 'new' as const,
+          }));
+
+          // Find deleted screenshots in compare that aren't in base (they will be removed)
+          const deletedShots = compareShots
+            .filter(shot => !baseSet.has(shot.relative_path))
+            .map(shot => ({
+              ...shot,
+              status: 'deleted' as const,
+            }));
+
+          // Combine all screenshots, with deleted ones at the end
+          shotsWithStatus = [...baseShotsWithStatus, ...deletedShots];
+        } else {
+          // No compare ref, all screenshots are unchanged
+          shotsWithStatus = baseShots.map(shot => ({ ...shot, status: 'unchanged' as const }));
+        }
+
+        setScreenshots(shotsWithStatus);
+        
+        if (shotsWithStatus.length === 0) {
           setError(`No screenshots found in ${repoName || 'repository'} on branch "${baseRef}"`);
         } else {
           setError(null);
@@ -106,7 +146,7 @@ function App() {
     };
 
     loadScreenshots();
-  }, [repoPath, baseRef]);
+  }, [repoPath, baseRef, compareRef]);
 
   if (!repoPath) {
     return <RepositoryPicker />;
